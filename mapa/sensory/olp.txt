@@ -1,0 +1,5 @@
+data=2025-10-27 21:50:14.573
+event=lp
+button=lp
+start=12560 -9965
+agent=serwer

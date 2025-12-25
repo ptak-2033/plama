@@ -1,0 +1,4 @@
+xy=11670 -14888
+ikona=serwer/serwer 1
+rozmiar=3
+proces=on

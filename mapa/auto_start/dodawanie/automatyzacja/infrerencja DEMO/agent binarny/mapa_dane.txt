@@ -1,0 +1,4 @@
+xy=12907 -12071
+ikona=agent/agent binarny
+rozmiar=1
+proces=off

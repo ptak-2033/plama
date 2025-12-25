@@ -1,0 +1,17 @@
+=== START SESJI ===
+[2025-12-12 22:04:37] start.py uruchomiony
+[2025-12-12 22:04:37] STATUS: proces=on
+[2025-12-12 22:04:37] RUN: python P:\PLAMA 1.0 ALPHA\mapa\opcje\dodaj obiekt\skrypty\pusty\proces.py
+[2025-12-12 22:04:37] WATCHER: monitor_stop aktywny
+[2025-12-12 22:04:41] EXIT: proces.py returncode=0
+[2025-12-12 22:04:41] STATUS: proces=old
+[2025-12-12 22:04:41] SUKCES: proces.py zakończony poprawnie
+[2025-12-12 22:04:41] NEXT: brak następny.txt (brak chain)
+[2025-12-12 22:04:46] EXIT: proces.py returncode=0
+[2025-12-12 22:04:46] STATUS: proces=old
+[2025-12-12 22:04:46] SUKCES: proces.py zakończony poprawnie
+[2025-12-12 22:04:46] NEXT: brak następny.txt (brak chain)
+[2025-12-12 22:04:49] EXIT: proces.py returncode=0
+[2025-12-12 22:04:49] STATUS: proces=old
+[2025-12-12 22:04:49] SUKCES: proces.py zakończony poprawnie
+[2025-12-12 22:04:49] NEXT: brak następny.txt (brak chain)

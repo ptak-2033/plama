@@ -1,0 +1,4 @@
+data=2025-11-07 19:27:25.843
+event=2xpp
+button=pp
+start=-4127 -14812

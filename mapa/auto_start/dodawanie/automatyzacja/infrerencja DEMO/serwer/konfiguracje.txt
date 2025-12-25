@@ -1,0 +1,8 @@
+model = modele/Llama-PLLuM-8B-base.Q5_K_M.gguf
+host = 127.0.0.1
+port = 3333
+c = 8192
+n_gpu_layers = 99
+threads = 1
+prio = 0
+--prompt-file instrukcje.txt

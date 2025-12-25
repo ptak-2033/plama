@@ -1,0 +1,13 @@
+czym jest plama?
+
+plama powstała w zasadzie przypadkiem
+z potrzeby łatwego programowania
+ciężko nazwać czym ten program jest
+każdy obiekt może być wszystkim,
+może przyjąć informacje
+przetworzyć po swojemu
+i wysłać dalej
+/
+pomysł był mój,
+ale kod pisało GPT
+ 

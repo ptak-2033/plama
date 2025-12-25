@@ -1,0 +1,18 @@
+[wizualne]
+kanal_alfa = tak
+okno = wl              ; wl | wyl
+kolor_okna = #000000
+kolor_tekstu = #00ff00
+rozmiar = 109
+
+[animacja]
+czas_pojawiania = 0.52
+czas_znikania = 0.94
+czas_wyswietlania = 3.0
+
+[pozycja]
+poziom = srodek
+pion = srodek
+
+[wizualne]
+blokuj_tlo = 1

@@ -1,0 +1,4 @@
+data=2025-12-25 02:01:14.135
+event=2xlp
+button=lp
+start=-1471 -1392

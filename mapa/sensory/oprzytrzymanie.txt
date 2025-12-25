@@ -1,0 +1,7 @@
+data=2025-10-27 21:50:14.818
+event=przytrzymanie
+button=lp
+start=12560 -9965
+end=13072 -10065
+czas_s=0.245038
+agent=serwer

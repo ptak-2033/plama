@@ -1,0 +1,4 @@
+xy=12907 -12071
+ikona=skrypt/python
+rozmiar=1
+proces=error

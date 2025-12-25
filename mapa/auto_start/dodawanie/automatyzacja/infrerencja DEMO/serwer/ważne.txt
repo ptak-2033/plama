@@ -1,0 +1,25 @@
+-t / --threads – ile wątków CPU ma używać model.
+--prio, --prio-batch – priorytet procesu (low/normal/medium/high/realtime).
+-c / --ctx-size – długość kontekstu (ile tokenów pamięta model).
+-n / --n-predict – ile tokenów ma wygenerować (jak nie ustawisz, leci aż do EOS / limitu).
+-ngl / --gpu-layers – ile warstw modelu wrzucić na GPU.
+-m / --model – ścieżka do GGUF (najważniejszy parametr w ogóle).
+--offline – zakaz dostępu do neta, korzysta tylko z lokalnego cache.
+
+--temp – kreatywność. Niżej = bardziej sztywno, wyżej = bardziej popierdolone 😅
+
+--top-k, --top-p, --min-p – jak wąsko / szeroko losuje słowa.
+
+--repeat-last-n, --repeat-penalty, --presence-penalty, --frequency-penalty – walka z powtarzaniem.
+
+--mirostat, --mirostat-* – inteligentne sterowanie entropią (zaawansowane, ale mocne).
+
+--grammar, --grammar-file, --json-schema, --json-schema-file – wymuszanie formatu (np. zawsze poprawny JSON).
+
+--logit-bias – dopałka/ban na konkretne tokeny (np. częściej mówi „YES” albo unika jakiegoś słowa).
+
+"stream": true
+
+
+
+

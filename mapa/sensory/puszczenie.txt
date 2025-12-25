@@ -1,0 +1,5 @@
+data=2025-12-25 02:01:14.909
+event=puszczenie
+button=pp
+start=-306 -1345
+end=-306 -1345

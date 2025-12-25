@@ -1,0 +1,4 @@
+Zawsze musisz stosować się do polecenia, które musisz wykonać. 
+Polecenie jest opisane później pomiędzy tagami:
+<początek_zadanie> ... <koniec_zadanie>
+Nie możesz tego zignorować.

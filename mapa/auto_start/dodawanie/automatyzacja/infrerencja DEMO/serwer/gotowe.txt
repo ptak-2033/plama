@@ -1,0 +1,8 @@
+# gotowe.txt — 2025-11-15 01:15:29
+host = 127.0.0.1
+port = 3333
+url = http://127.0.0.1:3333
+
+# SYSTEM PROMPT: przekazuj przez API!
+PRZYKŁAD ZAPYTANIA (curl):
+curl http://127.0.0.1:3333/v1/chat/completions -H "Content-Type: application/json" -d '{ "messages": [{ "role": "system", "content": "Twój system prompt z instrukcje.txt" }, { "role": "user", "content": "Pytanie użytkownika" }], "temperature": 0.7 }'

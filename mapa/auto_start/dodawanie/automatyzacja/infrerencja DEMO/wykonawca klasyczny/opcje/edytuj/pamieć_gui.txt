@@ -1,0 +1,8 @@
+cb_tożsamość=0
+cb_zadanie=0
+cb_zakazy=0
+cb_przykłady=0
+win_x=209
+win_y=35
+win_w=1500
+win_h=900

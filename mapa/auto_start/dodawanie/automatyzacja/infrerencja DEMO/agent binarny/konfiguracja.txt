@@ -1,0 +1,5 @@
+max_token=256
+temp=0.7
+serwer=serwer 1
+
+

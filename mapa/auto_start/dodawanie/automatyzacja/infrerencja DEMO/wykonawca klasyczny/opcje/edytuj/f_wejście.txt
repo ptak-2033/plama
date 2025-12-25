@@ -1,0 +1,3 @@
+zawsze musisz się stosować do zasad które są opisane później pomiędzy tagami:
+<początek_zakazy> ... <koniec_zakazy>
+Nie możesz tego zignorować.
