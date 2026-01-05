@@ -1,0 +1,3 @@
+zawsze musisz zwracać odpowiedź w takim stylu jak są opisane później pomiędzy tagami:
+<początek_przykłady> ... <koniec_przykłady>
+Nie możesz tego zignorować.

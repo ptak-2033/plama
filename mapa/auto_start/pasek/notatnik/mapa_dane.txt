@@ -1,0 +1,4 @@
+xy=12907 -12071
+ikona=plik/txt
+rozmiar=1
+proces=off

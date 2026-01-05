@@ -1,0 +1,3 @@
+xy1=-4139 -429|xy2=-2236 -394|proces=off
+xy1=-2236 -394|xy2=-1110 -1509|proces=off
+xy1=-2236 -394|xy2=-722 702|proces=off

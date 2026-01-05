@@ -1,0 +1,8 @@
+[2025-11-01 16:41:10] === START AGENTA ===
+[2025-11-01 16:41:10] Ustawiono proces=on
+[2025-11-01 16:41:10] Wczytano konfigurację: {'max_token': 256, 'temp': 0.7, 'url': 'http://127.0.0.1:3334'}
+[2025-11-01 16:41:10] Odczytano instrukcje (0 znaków) i wejście (0 znaków)
+[2025-11-01 16:41:10] Wysyłanie POST do http://127.0.0.1:3334/run (timeout=60s)
+[2025-11-01 16:41:13] [AGENT ERROR] URLError: <urlopen error [WinError 10061] Nie można nawiązać połączenia, ponieważ komputer docelowy aktywnie go odmawia>
+[2025-11-01 16:41:13] Ustawiono proces=error
+[2025-11-01 16:41:13] === KONIEC Z BŁĘDEM ===

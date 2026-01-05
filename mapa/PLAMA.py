@@ -17,7 +17,8 @@ from PyQt5.QtGui import QPainterPath  # ← DODANE dla LineItem
 from PyQt5.QtWidgets import QGraphicsLineItem
 from PyQt5.QtCore import QPoint
 from PyQt5.QtGui import QBrush
-
+from PyQt5.QtGui import QPainterPathStroker
+import math
 
 class Loger:
     COLORS = {"INFO": "\033[92m", "WARN": "\033[93m", "ERROR": "\033[91m", "RESET": "\033[0m",}
@@ -39,6 +40,8 @@ OPCJE_DIR = HERE / "opcje"
 BASE_DIR = HERE.parent
 OBJECTS_DIR = BASE_DIR / "obiekty"   # Główny folder obiektów
 ICONS_DIR = BASE_DIR / "ikony"
+TEKST_DANE_DIR = HERE / "tekst_dane"
+GENERALNE_TXT = TEKST_DANE_DIR / "generalne.txt"
 OBRAZ_PATH = BASE_DIR / "obraz.txt"
 LINES_DIR = BASE_DIR / "linie"            # główny folder linii
 POLACZENIE_PATH = BASE_DIR / "polaczenie.txt"
@@ -55,6 +58,58 @@ ZLO_MENAGER_LOG  = HERE / "zlo_menager.log"
 # CACHE (Mapowanie Obiektów)
 # =========================
 SOURCE_CACHE = {}
+# =========================
+# GENERALNE — STEROWANIE LOGIKĄ
+# =========================
+
+def handle_generalne_txt():
+    """
+    generalne:
+    - brak     → nic nie rób
+    - obiekty  → dodatkowy proces przy budowie obraz.txt
+    - linie    → dodatkowy proces przy budowie polaczenie.txt
+    - każdy    → oba procesy
+    """
+    if not GENERALNE_TXT.exists():
+        log.warn("generalne: plik nie istnieje → tryb BRAK")
+        return {"obiekty": False, "linie": False}
+
+    try:
+        value = GENERALNE_TXT.read_text(
+            encoding="utf-8", errors="replace"
+        ).strip().lower()
+    except Exception as e:
+        log.error(f"generalne: błąd odczytu: {e}")
+        return {"obiekty": False, "linie": False}
+
+    if value in ("", "brak"):
+        log.info("generalne=brak → zero dodatkowych procesów")
+        return {"obiekty": False, "linie": False}
+
+    if value == "obiekty":
+        log.info("generalne=obiekty → extra: obraz.txt")
+        return {"obiekty": True, "linie": False}
+
+    if value == "linie":
+        log.info("generalne=linie → extra: polaczenie.txt")
+        return {"obiekty": False, "linie": True}
+
+    if value in ("każdy", "kazdy"):
+        log.info("generalne=każdy → extra: oba")
+        return {"obiekty": True, "linie": True}
+
+    log.warn(f"generalne: nieznana wartość '{value}' → BRAK")
+    return {"obiekty": False, "linie": False}
+
+
+def extra_process_for_obiekty():
+    # PLACEHOLDER – logika dojdzie później
+    log.info("EXTRA(obiekty): placeholder aktywny")
+
+
+def extra_process_for_linie():
+    # PLACEHOLDER – logika dojdzie później
+    log.info("EXTRA(linie): placeholder aktywny")
 
 # =========================
 # FUNKCJE DANYCH AGENTA (Source Data)
@@ -117,32 +172,45 @@ def parse_source_file(path: Path, lines: list, agent_folder: str = ""):
             line = raw_line.strip()
             if not line:
                 continue
-            # rozbij na klucze
+
             parts = [p for p in line.split('|') if p.strip()]
             data = {}
             for part in parts:
                 if '=' in part:
                     k, v = part.split('=', 1)
                     data[k.strip().lower()] = v.strip()
-            # wymagane: xy
-            xy_val = data.get('xy', '0 0').strip()
+
+            xy_val = data.get('xy', '0 0')
             xy_parts = re.split(r'[\s,]+', xy_val)
             x = float(xy_parts[0]) if xy_parts and xy_parts[0] else 0.0
             y = float(xy_parts[1]) if len(xy_parts) > 1 and xy_parts[1] else 0.0
+
             size = data.get('rozmiar', '1')
             try:
                 size = float(str(size).replace(',', '.'))
             except:
                 size = 1.0
 
-            data_list.append({
-                "x": x, "y": y,
+            item = {
+                "x": x,
+                "y": y,
                 "ikona": data.get("ikona", ""),
                 "rozmiar": str(max(0.01, float(size))),
                 "proces": data.get("proces", "").lower(),
-                "file": str(path), "line_no": i, "raw_line": raw_line,
-                "is_source_multi": False, "agent_folder": agent_folder
-            })
+                "file": str(path),
+                "line_no": i,
+                "raw_line": raw_line,
+                "is_source_multi": False,
+                "agent_folder": agent_folder,
+            }
+
+            # 🔥 KLUCZ: PRZENIEŚ WSZYSTKIE FLAGI (obiekt_nazwa itd.)
+            for k, v in data.items():
+                if k not in item:
+                    item[k] = v
+
+            data_list.append(item)
+
         return data_list
 
     # Heurystyka do odróżnienia formatu multi-line od single-line
@@ -247,6 +315,42 @@ def load_source_data():
     log.info(f"Załadowano dane z {len(final_data_list)} obiektów z {len(list(OBJECTS_DIR.iterdir()))} agentów")
     return final_data_list
 
+def get_extra_obiekt_flag(agent_folder: str) -> str:
+    """
+    Zwraca dodatkową flagę dla obiektu na podstawie:
+    tekst_dane/obiekty.txt
+
+    źródła:
+    - id  → obiekty/<agent_folder>/id.txt
+    - nazwa → nazwa folderu
+    """
+    try:
+        mode = (TEKST_DANE_DIR / "obiekty.txt").read_text(
+            encoding="utf-8", errors="replace"
+        ).strip().lower()
+    except Exception:
+        return ""
+
+    if mode == "brak":
+        return ""
+
+    if mode == "nazwa":
+        return f"|obiekt_nazwa={agent_folder}"
+
+    if mode == "id":
+        try:
+            id_path = OBJECTS_DIR / agent_folder / "id.txt"
+            if id_path.exists():
+                obj_id = id_path.read_text(
+                    encoding="utf-8", errors="replace"
+                ).strip()
+                if obj_id:
+                    return f"|obiekt_id={obj_id}"
+        except Exception:
+            pass
+
+    return ""
+
 def write_obraz(source_data_list, output_path: Path = OBRAZ_PATH):
     """Generuje plik tekstowy obraz.txt (podsumowanie) z danych źródłowych."""
     try:
@@ -256,7 +360,18 @@ def write_obraz(source_data_list, output_path: Path = OBRAZ_PATH):
                 x = int(round(data.get('x', 0))); y = int(round(data.get('y', 0)))
                 ikona = data.get('ikona', ''); rozmiar = data.get('rozmiar', '1')
                 proces = data.get('proces', '')
-                f.write(f"xy={x} {y}|ikona={ikona}|rozmiar={rozmiar}|proces={proces}\n")
+                extra = ""
+                agent_folder = data.get("agent_folder", "")
+
+                # generalne decyduje, czy w ogóle doklejać
+                gen = handle_generalne_txt()
+                if gen.get("obiekty"):
+                    extra = get_extra_obiekt_flag(agent_folder)
+
+                f.write(
+                    f"xy={x} {y}|ikona={ikona}|rozmiar={rozmiar}|proces={proces}{extra}\n"
+                )
+
         log.info(f"Zapisano podsumowanie do: {output_path}")
     except Exception as e:
         log.error(f"Nie udało się zapisać pliku {output_path}: {e}")
@@ -293,35 +408,96 @@ def parse_line_source_file(path: Path, lines: list, line_folder: str = ""):
     }]
 
 def load_line_source_data():
-    """Wczytuje dane linii z /linie/*/linia_dane* (wiele plików na folder)."""
+    """
+    linie/<sieć>/
+        ├── opcje/          (ignorowane)
+        ├── linia_x/
+        │    └── linia_dane.txt
+    """
     global LINE_SOURCE_CACHE
     LINE_SOURCE_CACHE = {}
-    if not LINES_DIR.exists():
-        return []
     out = []
-    for line_dir in LINES_DIR.iterdir():
-        if not line_dir.is_dir():
-            continue
-        # bierzemy wszystko co zaczyna się od 'linia_dane' (z lub bez rozszerzenia)
-        cfg_list = sorted([
-            p for p in line_dir.iterdir()
-            if p.is_file() and p.name.lower().startswith("linia_dane")
-        ], key=lambda p: p.name.lower())
 
-        if not cfg_list:
+    if not LINES_DIR.exists():
+        return out
+
+    for siec_dir in LINES_DIR.iterdir():
+        if not siec_dir.is_dir():
             continue
 
-        for cfg in cfg_list:
+        for item in siec_dir.iterdir():
+            if not item.is_dir() or item.name == "opcje":
+                continue  # ⛔ pomijamy opcje
+
+            # każda linia = folder
+            cfg = item / "linia_dane.txt"
+            if not cfg.exists():
+                log.warn(f"Linia bez linia_dane.txt: {item}")
+                continue
+
             try:
-                lines = cfg.read_text(encoding="utf-8", errors="replace").splitlines()
-                items = parse_line_source_file(cfg, lines, line_dir.name)
-                for it in items:
-                    key = (it["x1"], it["y1"], it["x2"], it["y2"], it["proces"], it["line_folder"], cfg.name)
-                    LINE_SOURCE_CACHE[key] = it
-                    out.append(it)
+                lines = cfg.read_text(
+                    encoding="utf-8", errors="replace"
+                ).splitlines()
+
+                parsed = parse_line_source_file(
+                    cfg,
+                    lines,
+                    line_folder=item.name
+                )
+
+                for d in parsed:
+                    d["sieć_dir"] = str(siec_dir)   # 🔥 KLUCZ
+                    key = (
+                        d["x1"], d["y1"],
+                        d["x2"], d["y2"],
+                        d.get("proces", ""),
+                        siec_dir.name,
+                        item.name
+                    )
+                    LINE_SOURCE_CACHE[key] = d
+                    out.append(d)
+
             except Exception as e:
-                log.warn(f"Linie: błąd odczytu {cfg}: {e}")
+                log.error(f"Błąd linii {item}: {e}")
+
     return out
+
+def get_extra_linia_flag(line_folder: str) -> str:
+    """
+    Zwraca dodatkową flagę dla linii na podstawie:
+    tekst_dane/linie.txt
+
+    źródła:
+    - id  → linie/<line_folder>/l_id.txt
+    - nazwa → nazwa folderu
+    """
+    try:
+        mode = (TEKST_DANE_DIR / "linie.txt").read_text(
+            encoding="utf-8", errors="replace"
+        ).strip().lower()
+    except Exception:
+        return ""
+
+    if mode == "brak":
+        return ""
+
+    if mode == "nazwa":
+        return f"|linia_nazwa={line_folder}"
+
+    if mode == "id":
+        try:
+            id_path = LINES_DIR / line_folder / "l_id.txt"
+            if id_path.exists():
+                line_id = id_path.read_text(
+                    encoding="utf-8", errors="replace"
+                ).strip()
+                if line_id:
+                    return f"|linia_id={line_id}"
+        except Exception:
+            pass
+
+    return ""
 
 def write_polaczenie(line_source_list, output_path: Path = POLACZENIE_PATH):
     """Zapisuje podsumowanie linii (jak obraz.txt dla obiektów). Jedna linia = jedna linia na mapie."""
@@ -332,41 +508,67 @@ def write_polaczenie(line_source_list, output_path: Path = POLACZENIE_PATH):
                 x1, y1 = int(round(d.get("x1",0))), int(round(d.get("y1",0)))
                 x2, y2 = int(round(d.get("x2",0))), int(round(d.get("y2",0)))
                 proces = d.get("proces","")
-                f.write(f"xy1={x1} {y1}|xy2={x2} {y2}|proces={proces}\n")
+                extra = ""
+                line_folder = d.get("line_folder", "")
+
+                gen = handle_generalne_txt()
+                if gen.get("linie"):
+                    extra = get_extra_linia_flag(line_folder)
+
+                f.write(
+                    f"xy1={x1} {y1}|xy2={x2} {y2}|proces={proces}{extra}\n"
+                )
+
         log.info(f"Zapisano polaczenie.txt → {output_path}")
     except Exception as e:
         log.error(f"Nie udało się zapisać {output_path}: {e}")
 
 def load_line_display_data(path: Path = POLACZENIE_PATH):
-    """Wczytuje dane do rysowania linii z polaczenie.txt."""
     out = []
     if not path.is_file():
         return out
+
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         for raw in lines:
             raw = raw.strip()
             if not raw:
                 continue
+
             parts = [p for p in raw.split('|') if p.strip()]
             data = {}
             for p in parts:
                 if '=' in p:
-                    k,v = p.split('=',1)
+                    k, v = p.split('=', 1)
                     data[k.strip().lower()] = v.strip()
+
             def _xy(s):
                 ps = re.split(r'[\s,]+', (s or "0 0"))
                 x = float(ps[0]) if ps and ps[0] else 0.0
-                y = float(ps[1]) if len(ps)>1 and ps[1] else 0.0
+                y = float(ps[1]) if len(ps) > 1 and ps[1] else 0.0
                 return x, y
-            x1,y1 = _xy(data.get("xy1"))
-            x2,y2 = _xy(data.get("xy2"))
-            out.append({
-                "x1": x1, "y1": y1, "x2": x2, "y2": y2,
-                "proces": (data.get("proces","").lower())
-            })
+
+            x1, y1 = _xy(data.get("xy1"))
+            x2, y2 = _xy(data.get("xy2"))
+
+            item = {
+                "x1": x1,
+                "y1": y1,
+                "x2": x2,
+                "y2": y2,
+                "proces": (data.get("proces", "").lower()),
+            }
+
+            # 🔥 KLUCZ: PRZENIEŚ WSZYSTKIE FLAGI (linia_nazwa itd.)
+            for k, v in data.items():
+                if k not in item:
+                    item[k] = v
+
+            out.append(item)
+
     except Exception as e:
         log.error(f"Błąd odczytu polaczenie.txt: {e}")
+
     return out
 
 class TempDragLineItem(QGraphicsLineItem):
@@ -384,7 +586,16 @@ class TempDragLineItem(QGraphicsLineItem):
 class LineItem(QGraphicsItem):
     def __init__(self, data):
         super().__init__()
+        from pathlib import Path
         self.data = data
+        # 🔗 stała referencja do sieci (ustalana przy ładowaniu danych)
+        self.siec_dir = None
+        try:
+            sd = data.get("sieć_dir") or data.get("siec_dir")
+            if sd:
+                self.siec_dir = Path(sd)
+        except Exception:
+            self.siec_dir = None
         self.setAcceptHoverEvents(True)
         self.setZValue(0)  # pod ikonami
 
@@ -399,11 +610,12 @@ class LineItem(QGraphicsItem):
         self._path.lineTo(self._x2, self._y2)
 
     def boundingRect(self):
-        return self._path.boundingRect().adjusted(-8, -8, 8, 8)
+        return self._path.boundingRect().adjusted(-200, -80, 200, 40)
 
     def shape(self):
-        # grubszy hitbox dla łatwego hovera/kliknięcia (używamy samej ścieżki jako shape)
-        return self._path
+        stroker = QPainterPathStroker()
+        stroker.setWidth(30)   # ← HITBOX w px (20–40 jest OK)
+        return stroker.createStroke(self._path)
 
     def hoverEnterEvent(self, event):
         self.update()
@@ -447,9 +659,187 @@ class LineItem(QGraphicsItem):
         painter.setPen(pen)
         painter.drawPath(self._path)
 
+        dx = self._x2 - self._x1
+        dy = self._y2 - self._y1
+        angle = math.atan2(dy, dx)
+        length = math.hypot(dx, dy)
+
+        if length > 0:
+            positions = [0.42, 0.5, 0.58]
+
+            arrow_len = 30     # długość trójkąta
+            arrow_w   = 18     # szerokość podstawy
+            offset = math.pi / 2
+
+            base_color = painter.pen().color()
+
+            for t in positions:
+                px = self._x1 + dx * t
+                py = self._y1 + dy * t
+
+                tip = QPointF(
+                    px + arrow_len * math.cos(angle),
+                    py + arrow_len * math.sin(angle)
+                )
+
+                left = QPointF(
+                    px - arrow_w * math.cos(angle - offset),
+                    py - arrow_w * math.sin(angle - offset)
+                )
+
+                right = QPointF(
+                    px - arrow_w * math.cos(angle + offset),
+                    py - arrow_w * math.sin(angle + offset)
+                )
+
+                # === CIEŃ ===
+                shadow_offset = QPointF(2.5, 2.5)
+                shadow_path = QPainterPath()
+                shadow_path.moveTo(tip + shadow_offset)
+                shadow_path.lineTo(left + shadow_offset)
+                shadow_path.lineTo(right + shadow_offset)
+                shadow_path.closeSubpath()
+
+                painter.setPen(Qt.NoPen)
+                painter.setBrush(QColor(0, 0, 0, 80))  # miękki cień
+                painter.drawPath(shadow_path)
+
+                # === STRZAŁKA (WYPEŁNIONA) ===
+                arrow_path = QPainterPath()
+                arrow_path.moveTo(tip)
+                arrow_path.lineTo(left)
+                arrow_path.lineTo(right)
+                arrow_path.closeSubpath()
+
+                painter.setBrush(base_color)
+                painter.drawPath(arrow_path)
+
+                # === TEKST NA LINII ===
+        label = (
+            self.data.get("linia_nazwa")
+            or self.data.get("linia_id")
+        )
+
+        if label:
+            mx = (self._x1 + self._x2) / 2
+            my = (self._y1 + self._y2) / 2
+
+            painter.setPen(QColor(180, 180, 180))
+            font = painter.font()
+            font.setPointSize(64)
+            font.setItalic(True)
+            painter.setFont(font)
+
+            painter.drawText(
+                QRectF(mx - 400, my - 40, 800, 80),
+                Qt.AlignCenter,
+                str(label)
+            )
+    def contextMenuEvent(self, event):
+        # 🔒 brak sieci = brak menu
+        from pathlib import Path
+
+        linia_dane_path = None
+
+        # 1️⃣ spróbuj z oryginalnych danych (jeśli są)
+        src = self.data.get("original_source_data")
+        if src and "file" in src:
+            linia_dane_path = Path(src["file"])
+
+        # 2️⃣ fallback: szukaj po cache linii
+        if linia_dane_path is None:
+            for d in LINE_SOURCE_CACHE.values():
+                if (
+                    abs(d["x1"] - self.data.get("x1", 0)) < 0.1 and
+                    abs(d["y1"] - self.data.get("y1", 0)) < 0.1 and
+                    abs(d["x2"] - self.data.get("x2", 0)) < 0.1 and
+                    abs(d["y2"] - self.data.get("y2", 0)) < 0.1
+                ):
+                    linia_dane_path = Path(d["file"])
+                    break
+
+        if not linia_dane_path:
+            log.warn("LineItem: nie znaleziono linia_dane.txt")
+            return
+
+        siec_dir = find_siec_dir_from_linia_dane(linia_dane_path)
+
+        if not siec_dir or not siec_dir.exists():
+            return
+
+        opcje_dir = siec_dir / "opcje"
+        if not opcje_dir.exists():
+            return
+
+        if not opcje_dir.exists() or not opcje_dir.is_dir():
+            return
+
+        menu = QMenu()
+
+        # folder linii (do przekazania do opcji)
+        try:
+            linia_dir = Path(self.data["file"]).parent
+        except Exception:
+            linia_dir = None
+
+        for opt_dir in sorted(p for p in opcje_dir.iterdir() if p.is_dir()):
+            gui_py = None
+
+            if (opt_dir / "gui.py").exists():
+                gui_py = opt_dir / "gui.py"
+            else:
+                for f in opt_dir.iterdir():
+                    if f.is_file() and f.name.lower().startswith("gui"):
+                        gui_py = f
+                        break
+
+            if not gui_py:
+                continue
+
+            action = QAction(opt_dir.name, menu)
+
+            def _run(checked=False, gui=gui_py, s_dir=self.siec_dir, l_dir=linia_dir):
+                proc = QProcess()
+                proc.startDetached(
+                    sys.executable,
+                    [
+                        str(gui),
+                        str(s_dir),   # ✅ SIEĆ (stabilna)
+                        str(l_dir),   # linia
+                    ]
+                )
+
+            action.triggered.connect(_run)
+            menu.addAction(action)
+
+        if menu.actions():
+            menu.exec_(event.screenPos())
+
 # =========================
 # FUNKCJE DO WYSZUKIWANIA I AKTUALIZACJI PLIKÓW
 # =========================
+
+def find_siec_dir_from_linia_dane(linia_dane_path: Path) -> Optional[Path]:
+    """
+    Szuka katalogu sieci na podstawie pliku linia_dane.txt.
+    Sieć = pierwszy parent w górę drzewa, który zawiera folder 'opcje/'.
+
+    Nie zakłada struktury katalogów.
+    Filesystem = źródło prawdy.
+    """
+    try:
+        p = linia_dane_path.resolve()
+    except Exception as e:
+        log.error(f"find_siec_dir_from_linia_dane: resolve error: {e}")
+        return None
+
+    for parent in p.parents:
+        opcje_dir = parent / "opcje"
+        if opcje_dir.exists() and opcje_dir.is_dir():
+            return parent
+
+    log.warn(f"find_siec_dir_from_linia_dane: nie znaleziono sieci dla {linia_dane_path}")
+    return None
 
 def find_files_with_xy(target_x: float, target_y: float, target_agent: str = ""):
     """Znajduje pliki z podanymi współrzędnymi w odpowiednim folderze agenta."""
@@ -675,29 +1065,60 @@ class MapItem(QGraphicsPixmapItem):
         return br.united(expanded)
 
     def paint(self, painter: QPainter, option, widget=None):
+        # === NAJPIERW rysunek bazowy obiektu ===
         super().paint(painter, option, widget)
-        proces = (self.data.get('proces', '') or '').strip().lower()
 
-        # mapa kolorów dla wszystkich stanów
+        proces = (self.data.get("proces", "") or "").strip().lower()
+
+        # === MAPA KOLORÓW STANÓW ===
         color_map = {
-            "on": Qt.green,                 # zielony
-            "error": Qt.red,                # czerwony
-            "lag": QColor(255, 152, 0),     # pomarańcz
-            "old": QColor(144, 238, 144),   # jasna zieleń
+            "on": Qt.green,
+            "error": Qt.red,
+            "lag": QColor(255, 152, 0),
+            "old": QColor(144, 238, 144),
         }
 
         color = color_map.get(proces)
-        if not color:
-            return  # brak obwódki dla pustych lub nieznanych stanów
+        if color:
+            painter.setRenderHint(QPainter.Antialiasing, True)
 
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        pen = QPen(color)
-        pen.setWidthF(12.0)
-        pen.setCosmetic(True)
-        pen.setJoinStyle(Qt.RoundJoin)
-        painter.setPen(pen)
-        rect = super().boundingRect().adjusted(25, 25, -25, -25)
-        painter.drawEllipse(rect)
+            pen = QPen(color)
+            pen.setWidthF(12.0)
+            pen.setCosmetic(True)
+            pen.setJoinStyle(Qt.RoundJoin)
+            painter.setPen(pen)
+
+            rect = self.boundingRect().adjusted(-300, -300, 300, 300)
+            painter.drawEllipse(rect)
+
+        # === TEKST NAD OBIEKTEM ===
+        label = (
+            self.data.get("obiekt_nazwa")
+            or self.data.get("obiekt_id")
+        )
+
+        if label:
+            painter.setPen(QColor(220, 220, 220))
+
+            font = painter.font()
+            font.setPointSize(64)
+            font.setBold(True)
+            painter.setFont(font)
+
+            br = self.boundingRect()
+
+            text_rect = QRectF(
+                br.left() - 100,   # luz na szerokość
+                br.top() - 80,     # NAD obiektem (wysokość fontu)
+                br.width() + 200,
+                80                 # WYSOKOŚĆ pod 64pt
+            )
+
+            painter.drawText(
+                text_rect,
+                Qt.AlignCenter,
+                str(label)
+            )
 
     # === MENU OPCJI (PPM) ===
     def contextMenuEvent(self, event):
@@ -1103,34 +1524,53 @@ class MapView(QGraphicsView):
                 event.accept()
                 return
 
-            # jeśli NIE było dragu → to był „klik” → ewentualne menu
-            item = self._rpress_item_at_press
-            view_pos = self._rpress_start_viewpos
-            scene_pos_press = self._rpress_start_scenepos
+            # jeśli NIE było dragu → to był „klik” → routing po TYM, CO KLIKNIĘTO
+            item_now = self.itemAt(event.pos())
+
+            # --- 1️⃣ LINIA ---
+            # LineItem SAM obsługuje swoje menu (contextMenuEvent)
+            if isinstance(item_now, LineItem):
+                self._rpress_active = False
+                self._rpress_item_at_press = None
+                self._rpress_can_draw_line = False
+                self._pp_dragged = False
+                event.ignore()   # pozwól LineItem.contextMenuEvent zadziałać
+                return
+
+            # --- 2️⃣ OBIEKT ---
+            # MapItem SAM obsługuje swoje menu
+            if isinstance(item_now, MapItem):
+                self._rpress_active = False
+                self._rpress_item_at_press = None
+                self._rpress_can_draw_line = False
+                self._pp_dragged = False
+                event.ignore()   # pozwól MapItem.contextMenuEvent zadziałać
+                return
+
+            # --- 3️⃣ PUSTE TŁO → OPCJE MAPY ---
             self._rpress_active = False
             self._rpress_item_at_press = None
             self._rpress_can_draw_line = False
+            self._pp_dragged = False
 
-            if item is not None:
-                # jeśli to MapItem i ma helper _show_context_menu → odpal jego menu
-                try:
-                    if isinstance(item, MapItem) and hasattr(item, "_show_context_menu"):
-                        gp = self.mapToGlobal(view_pos)
-                        class _EvtProxy:
-                            def __init__(self, gpos): self._g = gpos
-                            def screenPos(self): return self._g
-                        # 🔒 JEŚLI tłumik aktywny – nie pokazuj menu
-                        if self._suppress_next_pp_context:
-                            self._suppress_next_pp_context = False
-                            event.accept()
-                            return
-                        item._show_context_menu(_EvtProxy(gp), scene_pos_press)
-                        event.accept()
-                        return
-                except Exception:
-                    pass
+            # 🔒 jeżeli był tłumik (np. po PPM-drag), to NIE pokazuj menu
+            if self._suppress_next_pp_context:
+                self._suppress_next_pp_context = False
+                event.accept()
+                return
 
-            # w przeciwnym razie: menu mapy (też respektuj tłumik)
+            # menu mapy
+            class _MouseEventProxy:
+                def __init__(self, p): self._p = p
+                def pos(self): return self._p
+
+            self._show_context_menu(
+                _MouseEventProxy(self._rpress_start_viewpos),
+                self._rpress_start_scenepos
+            )
+            event.accept()
+            return
+
             class _MouseEventProxy:
                 def __init__(self, p): self._p = p
                 def pos(self): return self._p
@@ -1482,24 +1922,33 @@ class MainWindow(QMainWindow):
     def _sources_signature(self):
         sig = []
         try:
+            # --- OBIEKTY ---
             if OBJECTS_DIR and OBJECTS_DIR.exists():
                 for agent in OBJECTS_DIR.iterdir():
                     if agent.is_dir():
-                        f = agent / 'mapa_dane.txt'
+                        f = agent / "mapa_dane.txt"
                         if f.exists():
                             st = f.stat()
                             sig.append((str(f), st.st_mtime, st.st_size))
-            # --- DODANE: linie ---
+
+            # --- LINIE (REKURENCYJNIE, WSZYSTKIE POZIOMY) ---
             if LINES_DIR and LINES_DIR.exists():
-                for ldir in LINES_DIR.iterdir():
-                    if ldir.is_dir():
-                        for f in ldir.iterdir():
-                            if f.is_file() and f.name.lower().startswith("linia_dane"):
-                                st = f.stat()
-                                sig.append((str(f), st.st_mtime, st.st_size))
+                for f in LINES_DIR.rglob("linia_dane*"):
+                    if f.is_file():
+                        st = f.stat()
+                        sig.append((str(f), st.st_mtime, st.st_size))
+
+            # --- TEKST_DANE (FLAGI EXTRA) ---
+            if TEKST_DANE_DIR and TEKST_DANE_DIR.exists():
+                for f in TEKST_DANE_DIR.iterdir():
+                    if f.is_file() and f.suffix.lower() == ".txt":
+                        st = f.stat()
+                        sig.append((str(f), st.st_mtime, st.st_size))
+
         except Exception:
             # jednorazowe błędy I/O pomijamy – kolejny cykl spróbuje ponownie
             pass
+
         return tuple(sorted(sig))
 
     # --- cykl I/O: regeneruj obraz.txt/polaczenie.txt TYLKO gdy faktycznie zmieniły się źródła ---

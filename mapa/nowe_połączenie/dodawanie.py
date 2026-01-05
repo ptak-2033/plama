@@ -1,6 +1,7 @@
 # plik: mapa/nowe_połączenie/dodawanie.py
 from pathlib import Path
 import re, sys, io, shutil
+import subprocess
 
 RX_XY = re.compile(r"^xy\s*=\s*(-?\d+)\s+(-?\d+)\s*$", re.M)
 
@@ -74,10 +75,10 @@ def copy_template_new_line(template_dir: Path, linie_dir: Path) -> Path:
 
 def copy_or_overwrite_ab(target: Path, ab_path: Path):
     """Wstawia AB.txt do nowo utworzonej linii (nadpisze jeśli cokolwiek tam już było)."""
-    shutil.copy2(ab_path, target / "AB.txt")
+    shutil.copy2(ab_path, target / "linia" / "AB.txt")
 
 def write_xy_to_linia_dane(linia_folder: Path, xy1, xy2):
-    linia_dane_path = linia_folder / "linia_dane.txt"
+    linia_dane_path = linia_folder / "linia" / "linia_dane.txt"
     content = read_text(linia_dane_path) if linia_dane_path.exists() else ""
     content = set_key_lines(content, "xy1", f"{xy1[0]} {xy1[1]}")
     content = set_key_lines(content, "xy2", f"{xy2[0]} {xy2[1]}")
@@ -87,7 +88,7 @@ def write_xy_to_linia_dane(linia_folder: Path, xy1, xy2):
 def main():
     script_dir = Path(__file__).parent.resolve()   # .../mapa/nowe_połączenie
     ab_path    = script_dir / "AB.txt"             # obok skryptu
-    template   = script_dir / "linia"              # SZABLON (obok skryptu)
+    template = script_dir / "linia"
 
     A, B = parse_ab(ab_path)
 
@@ -126,5 +127,13 @@ def main():
     print(f"   AB.txt → {new_line_folder / 'AB.txt'} (nadpisane jeśli istniało)")
     print(f"   xy1={xyA[0]} {xyA[1]}, xy2={xyB[0]} {xyB[1]} zapisane w {new_line_folder / 'linia_dane.txt'}")
 
+    # =========================
+    # ▶️ TRIGGER: MENEDŻER SIECI
+    # =========================
+    menedzer = script_dir / "menedzer_sieci.py"
+    if menedzer.exists():
+        subprocess.run([sys.executable, str(menedzer)], cwd=str(script_dir))
+
 if __name__ == "__main__":
     main()
+

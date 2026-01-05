@@ -1,0 +1,5 @@
+xy=-4139 -429|ikona=plik/txt|rozmiar=1.0|proces=old|obiekt_nazwa=dodany obiekt 1
+xy=1776 88|ikona=skrypt/python|rozmiar=1.0|proces=old|obiekt_nazwa=dodany obiekt 2
+xy=-2236 -394|ikona=skrypt/python|rozmiar=1.0|proces=old|obiekt_nazwa=dodany obiekt 3
+xy=-1110 -1509|ikona=plik/txt|rozmiar=1.0|proces=old|obiekt_nazwa=dodany obiekt 4
+xy=-722 702|ikona=plik/txt|rozmiar=1.0|proces=old|obiekt_nazwa=dodany obiekt 5

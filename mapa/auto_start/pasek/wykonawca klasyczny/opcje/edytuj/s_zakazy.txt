@@ -1,0 +1,3 @@
+<początek_zakazy>
+dsadsa
+<koniec_zakazy>
